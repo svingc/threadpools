@@ -1,0 +1,10 @@
+[package]
+name = "simple-thread-pool"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[[bench]]
+name = "standardpool_bench"
+path = "benches/standardpool_bench.rs"
+harness = true
