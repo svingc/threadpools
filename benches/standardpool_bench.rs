@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-use crate::pools::standardpool::JobScheduler;
-use crate::support::tasks;
+extern crate threadpools as root;
+
+use root::pools::standardpool::JobScheduler;
+use root::support::tasks;
 use std::sync::atomic::Ordering::SeqCst;
+use std::sync::Arc;
 use std::time::Instant;
 
 /// Benchmarks the performance of parallel array sum computation using the
@@ -24,19 +27,17 @@ fn benchmark_subslice_sum(
     let scheduler = JobScheduler::new(thread_count);
 
     // Create test array filled with 1's.
-    let input_array = vec![1u64; array_size];
+    let input_array = Arc::new(vec![1u32; array_size]);
 
     // Start timing.
     let start_time = Instant::now();
 
     // Create tasks that each sum a portion of the array.
-    let mut sum_tasks = crate::support::tasks::get_subslice_sum_tasks(
-        input_array.clone(),
-        task_count,
-    );
+    let mut sum_tasks =
+        tasks::get_subslice_sum_tasks(input_array.clone(), task_count);
 
     // Submit all tasks to scheduler.
-    for task in sum_tasks {
+    for task in &sum_tasks {
         scheduler.add_task(task.clone());
     }
 
@@ -60,40 +61,64 @@ fn benchmark_subslice_sum(
 fn main() {
     println!("Running benchmarks...\n");
 
-    // Benchmark 1: Different thread counts with fixed task count and array size
-    println!(
-        "Benchmark 1: Scaling thread count (task count and array size: {}) ",
-        2_u32.pow(17)
-    );
-    let task_count = 2_u32.pow(17) as usize;
-    let array_size = task_count;
-    for threads in [4, 8, 16] {
-        let time = benchmark_subslice_sum(
-            threads,
-            2_u32.pow(17) as usize,
-            2_u32.pow(17) as usize,
-        );
-        println!(
-            "{:2} threads, {:7} tasks, {:7} array size: {:.6} seconds",
-            threads, task_count, array_size, time
-        );
-    }
-    println!();
+    // Benchmark 1: Testing task queue performance with many small tasks.
+    {
+        // Set very high task count but small array size per task
+        const TASK_COUNT: usize = 2_u32.pow(20) as usize;
+        const ARRAY_SIZE: usize = TASK_COUNT / 1000;
 
-    // Benchmark 2: Different array sizes with fixed thread and task count
-    println!("Benchmark 2: Scaling array size (4 threads, 4 tasks)");
-    for size in [100_000, 1_000_000, 10_000_000] {
-        let time = benchmark_subslice_sum(4, 4, size);
-        println!("{:9} elements (4 threads/tasks): {:.6} seconds", size, time);
-    }
-    println!();
+        println!("\nBenchmark 1: Testing task queue overhead");
 
-    // Benchmark 3: Large arrays with different thread/task counts
-    println!(
-        "Benchmark 3: Large arrays (10,000,000 elements, equal threads/tasks)"
-    );
-    for threads in [1, 2, 4, 8, 16] {
-        let time = benchmark_subslice_sum(threads, threads, 10_000_000);
-        println!("{:2} threads/tasks: {:.6} seconds", threads, time);
+        // Test with varying number of threads
+        let thread_counts = [2, 4, 8, 16, 32];
+        for &threads in &thread_counts {
+            let duration =
+                benchmark_subslice_sum(threads, TASK_COUNT, ARRAY_SIZE);
+
+            print!("{{\"threads\": {:2}", threads);
+            print!(", \"tasks\": {}", TASK_COUNT);
+            print!(", \"array_size\": {}", ARRAY_SIZE);
+            print!(", \"time\": {:.6}}}\n", duration);
+        }
+        println!();
+    }
+
+    // Benchmark 2: Different array sizes with fixed thread and task count.
+    {
+        const THREAD_COUNT: usize = 4;
+        const TASK_COUNT: usize = 4;
+
+        println!("\nBenchmark 2: Scaling array size");
+
+        // Test with varying array sizes
+        let array_sizes = [1_000_000, 10_000_000, 100_000_000];
+        for &size in &array_sizes {
+            let duration =
+                benchmark_subslice_sum(THREAD_COUNT, TASK_COUNT, size);
+
+            print!("{{\"threads\": {}", THREAD_COUNT);
+            print!(", \"tasks\": {}", TASK_COUNT);
+            print!(", \"array_size\": {:9}", size);
+            print!(", \"time\": {:.6}}}\n", duration);
+        }
+        println!();
+    }
+
+    // Benchmark 3: Testing thread scaling on large arrays
+    {
+        const ARRAY_SIZE: usize = 50_000_000;
+
+        println!("\nBenchmark 3: Thread scaling with large arrays");
+
+        let thread_counts = [1, 2, 4, 8, 16];
+        for &threads in &thread_counts {
+            let duration = benchmark_subslice_sum(threads, threads, ARRAY_SIZE);
+
+            print!("{{\"threads\": {:2}", threads);
+            print!(", \"tasks\": {:2}", threads);
+            print!(", \"array_size\": {}", ARRAY_SIZE);
+            print!(", \"time\": {:.6}}}\n", duration);
+        }
+        println!();
     }
 }
