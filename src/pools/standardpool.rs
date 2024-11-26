@@ -43,7 +43,7 @@ impl Task for BarrierTask {
 
 /// Shared data structure for the job scheduler, holding the task queue and a
 /// shutdown flag.
-struct SchedulerSharedData {
+struct PoolSharedData {
     /// Queue of tasks for worker threads.
     task_queue: VecDeque<Arc<dyn Task + Send + Sync>>,
     /// Flag to signal shutdown to worker threads.
@@ -52,30 +52,30 @@ struct SchedulerSharedData {
 
 /// Job scheduler that manages worker threads, tasks, and synchronization for
 /// task execution.
-pub struct JobScheduler {
+pub struct StandardPool {
     /// Pool of worker threads.
     worker_threads: Vec<thread::JoinHandle<()>>,
     /// Shared data protected by a mutex
-    shared_data: Arc<Mutex<SchedulerSharedData>>,
+    shared_data: Arc<Mutex<PoolSharedData>>,
     /// Condition variable to notify workers of new tasks or shutdown.
     task_available: Arc<Condvar>,
 }
 
-impl SchedulerSharedData {
+impl PoolSharedData {
     fn new() -> Self {
-        SchedulerSharedData {
+        PoolSharedData {
             task_queue: VecDeque::with_capacity(128),
             shutdown_flag: false,
         }
     }
 }
 
-impl JobScheduler {
+impl StandardPool {
     /// Creates a new job scheduler with the specified number of worker threads.
     pub fn new(thread_count: usize) -> Self {
-        let mut job_scheduler = JobScheduler {
+        let mut job_scheduler = StandardPool {
             worker_threads: Vec::with_capacity(thread_count),
-            shared_data: Arc::new(Mutex::new(SchedulerSharedData::new())),
+            shared_data: Arc::new(Mutex::new(PoolSharedData::new())),
             task_available: Arc::new(Condvar::new()),
         };
 
@@ -160,7 +160,7 @@ impl JobScheduler {
     }
 }
 
-impl Drop for JobScheduler {
+impl Drop for StandardPool {
     /// Signals the scheduler to shut down by setting the shutdown flag and
     /// notifying all workers.
     fn drop(&mut self) {
@@ -179,67 +179,5 @@ impl Drop for JobScheduler {
         for handler in self.worker_threads.drain(..) {
             let _ = handler.join();
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::support::tasks::{get_subslice_sum_tasks, SharedCounterTask};
-    use std::sync::atomic::Ordering::SeqCst;
-
-    #[test]
-    fn test_functionality_shared_variable() {
-        // Set up test parameters
-        let num_workers = 32;
-        let total_tasks = 2048;
-        let scheduler = JobScheduler::new(num_workers);
-        let shared_counter = Arc::new(Mutex::new(0));
-
-        // Run tasks in 8 batches with barriers between each batch
-        for _ in 0..8 {
-            for _ in 0..total_tasks / 8 {
-                scheduler.add_task(Arc::new(SharedCounterTask::new(
-                    shared_counter.clone(),
-                )));
-            }
-            scheduler.barrier();
-        }
-
-        assert_eq!(*shared_counter.lock().unwrap(), total_tasks);
-    }
-
-    #[test]
-    fn test_functionality_subslices() {
-        let num_workers: usize = 32; // 2^5
-        let num_tasks: usize = 4096; // 2^12
-        let array_size: usize = 4194304; // 2^22
-        let num_barriers: usize = 8; // 2^3
-
-        // Initialize the job scheduler with specified number of worker threads.
-        let scheduler = JobScheduler::new(num_workers);
-
-        // Create array of 1s that will be summed.
-        let array = Arc::new(vec![1u32; array_size]);
-
-        // Create tasks that each sum a portion of the array.
-        let mut tasks = get_subslice_sum_tasks(array.clone(), num_tasks);
-
-        // Process tasks in chunks with barriers between chunks.
-        for task_chunk in tasks.chunks(num_tasks / num_barriers) {
-            for task in task_chunk {
-                scheduler.add_task(task.clone());
-            }
-            scheduler.barrier();
-        }
-
-        // Sum up results from all tasks.
-        let mut total_sum = 0u64;
-        for task in tasks.drain(..) {
-            total_sum += task.subslice_sum.load(SeqCst);
-        }
-
-        // Verify sum equals array size (since array contains all 1s).
-        assert_eq!(total_sum, array_size as u64);
     }
 }

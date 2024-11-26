@@ -2,7 +2,7 @@
 
 extern crate threadpools as root;
 
-use root::pools::standardpool::JobScheduler;
+use root::pools::standardpool::StandardPool;
 use root::support::tasks;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
@@ -24,7 +24,7 @@ fn benchmark_subslice_sum(
     array_size: usize,
 ) -> f64 {
     // Initialize thread pool scheduler.
-    let scheduler = JobScheduler::new(thread_count);
+    let scheduler = StandardPool::new(thread_count);
 
     // Create test array filled with 1's.
     let input_array = Arc::new(vec![1u32; array_size]);
