@@ -1,10 +1,10 @@
-extern crate threadpools as root;
+// extern crate threadpools as root;
 
-use root::{
+use std::sync::{atomic::Ordering::SeqCst, Arc, Mutex};
+use threadpools::{
     pools::standardpool::StandardPool,
     support::tasks::{get_subslice_sum_tasks, SharedCounterTask},
 };
-use std::sync::{atomic::Ordering::SeqCst, Arc, Mutex};
 
 #[test]
 fn test_functionality_shared_variable() {
