@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::{thread, time::Duration};
-use threadpools::pools::standardpool::{StandardPool, Task};
+use threadpools::standardpool::{StandardPool, Task};
 
 /// Task that sleeps for a specified duration
 struct SleepTask {

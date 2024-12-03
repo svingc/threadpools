@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: MIT
-
 /// A struct for splitting a range of items into evenly distributed chunks.
 pub struct ChunkSplitter {
     /// Total number of items to be split into chunks.

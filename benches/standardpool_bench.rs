@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-extern crate threadpools as root;
-
-use root::pools::standardpool::StandardPool;
-use root::support::tasks;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use std::time::Instant;
+use test_utils::tasks;
+use threadpools::standardpool::StandardPool;
 
 /// Benchmarks the performance of parallel array sum computation using the
 /// standard thread pool.

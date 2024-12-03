@@ -7,3 +7,6 @@ license = "MIT"
 [[bench]]
 name = "standardpool_bench"
 harness = false
+
+[dev-dependencies]
+test_utils = { path = "./test_utils" }

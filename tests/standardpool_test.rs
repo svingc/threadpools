@@ -1,10 +1,28 @@
 // extern crate threadpools as root;
 
 use std::sync::{atomic::Ordering::SeqCst, Arc, Mutex};
-use threadpools::{
-    pools::standardpool::StandardPool,
-    support::tasks::{get_subslice_sum_tasks, SharedCounterTask},
-};
+use test_utils::tasks::get_subslice_sum_tasks;
+use threadpools::standardpool::{StandardPool, Task};
+
+/// Task that increments a shared counter protected by a mutex.
+pub struct SharedCounterTask {
+    /// Thread-safe counter variable protected by a mutex.
+    counter: Arc<Mutex<u32>>,
+}
+
+impl SharedCounterTask {
+    /// Creates a new SharedCounterTask with the given counter.
+    pub fn new(counter: Arc<Mutex<u32>>) -> Self {
+        SharedCounterTask { counter }
+    }
+}
+
+impl Task for SharedCounterTask {
+    fn execute(&self) {
+        let mut counter_guard = self.counter.lock().unwrap();
+        *counter_guard += 1;
+    }
+}
 
 #[test]
 fn test_functionality_shared_variable() {

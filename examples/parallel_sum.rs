@@ -2,7 +2,7 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
 };
-use threadpools::pools::standardpool::{StandardPool, Task};
+use threadpools::standardpool::{StandardPool, Task};
 
 /// Task that sums a portion of an array in parallel
 struct SumTask {

@@ -1,6 +1,7 @@
-use crate::pools::standardpool::Task;
+use crate::slices_utils::ChunkSplitter;
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 use std::sync::{Arc, Mutex};
+use threadpools::standardpool::Task;
 
 /// Task that increments a shared counter protected by a mutex.
 pub struct SharedCounterTask {
@@ -57,8 +58,6 @@ pub fn get_subslice_sum_tasks(
     input_array: Arc<Vec<u32>>,
     num_tasks: usize,
 ) -> Vec<Arc<SubsliceSumTask>> {
-    use super::common::ChunkSplitter;
-
     let mut sum_tasks: Vec<Arc<SubsliceSumTask>> =
         Vec::with_capacity(num_tasks);
     let chunk_splitter = ChunkSplitter::new(input_array.len(), num_tasks);
