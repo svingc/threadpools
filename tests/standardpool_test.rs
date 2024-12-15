@@ -1,4 +1,4 @@
-// extern crate threadpools as root;
+// SPDX-License-Identifier: MIT
 
 use std::sync::{atomic::Ordering::SeqCst, Arc, Mutex};
 use test_utils::tasks::get_subslice_sum_tasks;

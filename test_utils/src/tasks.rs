@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 use crate::slices_utils::ChunkSplitter;
 use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
 use std::sync::{Arc, Mutex};
